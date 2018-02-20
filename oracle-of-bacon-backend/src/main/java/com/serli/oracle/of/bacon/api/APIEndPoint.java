@@ -27,6 +27,7 @@ public class APIEndPoint {
 
     @Get("bacon-to?actor=:actorName")
     public String getConnectionsToKevinBacon(String actorName) {
+        redisRepository.addActor(actorName);
         return new Gson().toJson((ArrayList) neo4JRepository.getConnectionsToKevinBacon(actorName));
     }
 
@@ -41,11 +42,7 @@ public class APIEndPoint {
 
     @Get("last-searches")
     public List<String> last10Searches() {
-        return Arrays.asList("Peckinpah, Sam",
-                "Robbins, Tim (I)",
-                "Freeman, Morgan (I)",
-                "De Niro, Robert",
-                "Pacino, Al (I)");
+        return redisRepository.getLastTenSearches();
     }
 
     @Get("actor?name=:actorName")
