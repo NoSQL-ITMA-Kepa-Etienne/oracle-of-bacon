@@ -1,12 +1,11 @@
 package com.serli.oracle.of.bacon.repository;
 
 
-import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.v1.*;
+import org.neo4j.driver.v1.types.Node;
+import org.neo4j.driver.v1.types.Path;
 
-import java.util.List;
+import java.util.*;
 
 public class Neo4JRepository {
     private final Driver driver;
@@ -17,9 +16,62 @@ public class Neo4JRepository {
 
     public List<?> getConnectionsToKevinBacon(String actorName) {
         Session session = driver.session();
+        Transaction t = session.beginTransaction();
 
-        // TODO implement Oracle of Bacon
-        return null;
+        // MATCH p=shortestPath((bacon:Person {name:"Bacon, Kevin (I)"})-[*]-(act:Person {name: "Hewetson, Joe"})) RETURN p
+        StatementResult sr = t.run("MATCH p=shortestPath((bacon:Person {name:\"Bacon, Kevin (I)\"})-[*]-(act:Person {name: \"" + actorName + "\"})) RETURN p");
+
+        ArrayList<Map<String, GraphItem>> result = new ArrayList<Map<String, GraphItem>>();
+
+        while (sr.hasNext()) {
+            Record rec = sr.next();
+            Path path = (Path) rec.asMap().get("p");
+
+            // On parcourt chaque noeud, et on cree un GraphNode pour chaque
+            path.nodes().forEach(node -> {
+                long id;
+                String type, value;
+                GraphNode graphNode;
+
+                id = node.id();
+                if(node.containsKey("name")) {
+                    graphNode = new GraphNode(
+                                        node.id(),
+                                        node.get("name").asString(),
+                                        "Person");
+                    HashMap<String, GraphItem> map = new HashMap();
+                    map.put("data", graphNode);
+                    result.add(map);
+                }
+
+                if(node.containsKey("title")) {
+                    type = "Movie";
+                    value = node.get("title").asString();
+                    graphNode = new GraphNode(
+                                        node.id(),
+                                        node.get("title").asString(),
+                                        "Movie");
+                    HashMap<String, GraphItem> map = new HashMap();
+                    map.put("data", graphNode);
+                    result.add(map);
+                }
+            });
+
+            // On parcourt chaque arete, et on cree un GraphEdge pour chaque
+            path.relationships().forEach(r -> {
+                GraphEdge graphEdge = new GraphEdge(
+                                        r.id(),
+                                        r.startNodeId(),
+                                        r.endNodeId(),
+                                        "PLAYED_IN");
+                HashMap<String, GraphItem> map = new HashMap();
+                map.put("data", graphEdge);
+                result.add(map);
+            });
+        }
+
+        t.success();
+        return result;
     }
 
     public static abstract class GraphItem {
