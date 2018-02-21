@@ -35,24 +35,20 @@ public class APIEndPoint {
 
     @Get("suggest?q=:searchQuery")
     public List<String> getActorSuggestion(String searchQuery) throws IOException {
-        return Arrays.asList("Niro, Chel",
-                "Senanayake, Niro",
-                "Niro, Juan Carlos",
-                "de la Rua, Niro",
-                "Niro, Simão");
+        return elasticSearchRepository.getActorsSuggests(searchQuery);
     }
 
     @Get("last-searches")
     public List<String> last10Searches() {
-        return redisRepository.getLastTenSearches();
+        return null;//redisRepository.getLastTenSearches();
     }
 
     @Get("actor?name=:actorName")
     public String getActorByName(String actorName) {
-        Optional<Document> optionalDocument = mongoDbRepository.getActorByName(actorName);
+        /*Optional<Document> optionalDocument = mongoDbRepository.getActorByName(actorName);
         if(optionalDocument.isPresent()){
             return new Gson().toJson(optionalDocument.get());
-        }
+        }*/
         return null;
     }
 }

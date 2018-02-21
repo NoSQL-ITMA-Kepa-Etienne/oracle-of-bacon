@@ -1,7 +1,6 @@
 package com.serli.oracle.of.bacon.loader.elasticsearch;
 
 import com.serli.oracle.of.bacon.repository.ElasticSearchRepository;
-import io.searchbox.core.Bulk;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -15,17 +14,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /*
-    Récupéré depuis le GitHub des généreux
+    Récupéré depuis le GitHub de
      * Steeve SINAGAGLIA
      * Damien RENAUD
     Car nos données ont été insérées à l'aide du script insert_actors fourni dans le elasticsearch-102 :
         nous n'avons pas réussi à obtenir un environnement Java stable pendant le TP...
+        Notre script (js) est disponible dans ce package
 */
 public class CompletionLoader {
     private static AtomicLong count = new AtomicLong(0);
@@ -41,12 +41,13 @@ public class CompletionLoader {
         }
 
 
-        String file = args[0];
+        String inputFilePath = args[0];
 
-        List<BulkRequest> requests = new ArrayList<>();
+
+        LinkedList<BulkRequest> requests = new LinkedList<>();
         requests.add(new BulkRequest());
 
-        try (BufferedReader bufferedReader = Files.newBufferedReader(Paths.get(file))) {
+        try (BufferedReader bufferedReader = Files.newBufferedReader(Paths.get(inputFilePath))) {
             bufferedReader
                     .lines()
                     .forEach(line -> {
@@ -55,11 +56,15 @@ public class CompletionLoader {
                         // Creates a new BulkRequest.
                         if (requests.peekLast().estimatedSizeInBytes() > 9 * MB_SIZE) {
                             requests.add(new BulkRequest());
+                            logger.info("The {} bulkRequest was created", requests.size());
+
                         }
 
-                        Map<String, Object> jsonMap = new HashMap<>();
-                        jsonMap.put("name", line);
+                        line = line.substring(1, line.length() - 1); //remove double quote
 
+                        Map<String, Object> jsonMap = new HashMap<>();
+
+                        jsonMap.put("name", line);
                         BulkRequest currentRequest = requests.peekLast(); //takes the last request manipulated.
                         currentRequest.add(new IndexRequest("imdb", "actors")
                                 .source(jsonMap)
@@ -74,34 +79,8 @@ public class CompletionLoader {
         final long totalItemsToInsert = requests.stream().mapToInt(r -> r.requests().size()).sum();
         logger.info("total of actors : {}", totalItemsToInsert);
 
-//        makeAllRequestsSynch(client, requests);
         makeAllRequestsAsynch(client, requests);
 
-    }
-
-
-    /**
-     * Makes all BulkRequest synchronously. Close the client connection at the end.
-     *
-     * @param client   client of elasticsearch db.
-     * @param requests list of all BulkRequest (A BulkRequest data lenght is lte to 10MB).
-     */
-    public static void makeAllRequestsSynch(RestHighLevelClient client, List<BulkRequest> requests) {
-        for (BulkRequest request : requests) {
-            try {
-                count.addAndGet(client.bulk(request).getItems().length);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            logger.info("Inserted {} actors", count);
-        }
-
-        logger.info("Inserted total of {} actors", count);
-        try {
-            client.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**

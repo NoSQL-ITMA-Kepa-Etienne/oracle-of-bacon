@@ -1,10 +1,22 @@
 package com.serli.oracle.of.bacon.repository;
 
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.unit.Fuzziness;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.SuggestBuilders;
+import org.elasticsearch.search.suggest.SuggestionBuilder;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ElasticSearchRepository {
@@ -25,7 +37,27 @@ public class ElasticSearchRepository {
     }
 
     public List<String> getActorsSuggests(String searchQuery) throws IOException {
-        // TODO implement suggest
-        return null;
+        
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        SuggestionBuilder suggestionBuilder = SuggestBuilders.completionSuggestion("suggest")
+                                                             .prefix(searchQuery, Fuzziness.AUTO);
+        SuggestBuilder suggestBuilder = new SuggestBuilder();
+        suggestBuilder.addSuggestion("prefix", suggestionBuilder);
+        
+        searchSourceBuilder.suggest(suggestBuilder);
+        SearchRequest request = new SearchRequest();
+        request.source(searchSourceBuilder);
+
+        SearchResponse response = client.search(request);
+        Suggest suggest = response.getSuggest();
+        CompletionSuggestion completionSuggestion = suggest.getSuggestion("prefix");
+
+        List<String> result = new ArrayList<String>();
+        for (CompletionSuggestion.Entry entry : completionSuggestion.getEntries()) {
+            for (CompletionSuggestion.Entry.Option option : entry) {
+                result.add(option.getHit().getSourceAsMap().get("name").toString());
+            }
+        }
+        return result;
     }
 }
