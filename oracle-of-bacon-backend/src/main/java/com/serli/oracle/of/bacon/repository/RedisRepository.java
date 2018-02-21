@@ -12,7 +12,7 @@ public class RedisRepository {
     }
 
     public List<String> getLastTenSearches() {
-        return jedis.lrange("list", 0, 10);
+        return jedis.lrange("list", 0, 9);
     }
 
     public void addActor(String actorName) {

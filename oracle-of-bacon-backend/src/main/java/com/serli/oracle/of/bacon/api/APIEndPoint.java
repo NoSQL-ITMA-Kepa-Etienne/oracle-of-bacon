@@ -40,15 +40,15 @@ public class APIEndPoint {
 
     @Get("last-searches")
     public List<String> last10Searches() {
-        return null;//redisRepository.getLastTenSearches();
+        return redisRepository.getLastTenSearches();
     }
 
     @Get("actor?name=:actorName")
     public String getActorByName(String actorName) {
-        /*Optional<Document> optionalDocument = mongoDbRepository.getActorByName(actorName);
+        Optional<Document> optionalDocument = mongoDbRepository.getActorByName(actorName);
         if(optionalDocument.isPresent()){
             return new Gson().toJson(optionalDocument.get());
-        }*/
+        }
         return null;
     }
 }

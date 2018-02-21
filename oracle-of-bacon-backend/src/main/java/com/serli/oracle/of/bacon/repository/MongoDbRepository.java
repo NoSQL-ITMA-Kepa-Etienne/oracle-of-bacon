@@ -19,7 +19,6 @@ public class MongoDbRepository {
     }
 
     public Optional<Document> getActorByName(String name) {
-        // TODO implement actor fetch
         this.actorCollection.find();
 
         Document doc = actorCollection.find(eq("name", name)).first();
